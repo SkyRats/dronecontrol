@@ -1,18 +1,3 @@
-# dronecontrol
-
-:robot: Control Nodes for PX4 compatible drones
-
-### Requirements
-* ROS
-* MAVROS
-
-### Launching mavros
-* via USB telemetry `roslaunch mavros px4.launch fcu_url:="/dev/ttyUSB0:57600"`
-* simulation `roslaunch mavros px4.launch fcu_url:="udp://:14550@127.0.0.1:14557"`
-
-
-
-
 \\\\\\\\   \\ //   \\ // \\\\\\\   \\\\   \\\\\\\\ \\\\\\\\\
 \\         \\//     \//  \\    \   \\\\\\     \\\   \\
 \\\\\\\\   \\\\     //   \\\\\\\  \\\   \\\    \\\   \\\\\\\\
@@ -36,4 +21,21 @@ Therefore, you can integrate your ROS packages easily with PX4, Ardupilot or ano
 In this case, the Skyrats development team uses PX4 Flight Stack to control our aircrafts.
 3. Finally, you can install dronecontrol.
 
-Currently version: 1.0.0
+Currently version: 2.0.0
+
+
+# dronecontrol
+
+:robot: Control Nodes for PX4 compatible drones
+
+### Requirements
+* ROS
+* MAVROS
+
+### Launching mavros
+* via USB telemetry `roslaunch mavros px4.launch fcu_url:="/dev/ttyUSB0:57600"`
+* simulation `roslaunch mavros px4.launch fcu_url:="udp://:14550@127.0.0.1:14557"`
+
+
+
+
