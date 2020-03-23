@@ -7,7 +7,7 @@ from MAV import MAV
 import threading
 from std_msgs.msg import Bool
 from progress.bar import ChargingBar
-
+from mavros_msgs.msg import ExtendedState
 
 # define state Takeoff
 class Takeoff(smach.State):
@@ -40,6 +40,16 @@ class Mission(smach.State):
         self.squareSide = 5
         self.batteryThreshold = 0.51 #60% remaining
 
+    def all_drone_landed(self, mavs):
+        result = True
+        for mav in mavs:
+            print(mav.LAND_STATE)
+            if mav.LAND_STATE == ExtendedState.LANDED_STATE_ON_GROUND:
+                result = result and True
+            else:
+                result = result and False
+        return result
+
     def execute(self, userdata):
         rospy.loginfo('\n\nRealizando trajetoria\n\n')
         height = 5 # 5m
@@ -61,17 +71,25 @@ class Mission(smach.State):
         while t < 60*T:
             for mav in mavs:
                 mav.set_position(t*final_pose[0]/(60*T), t*final_pose[1]/(60*T), 5)
-            t += 1/2.0
+            mavs[0].rate.sleep()
+            t += 2
+        
         for mav in mavs:
             mav.land()
+            mav.rate.sleep()
+        while not self.all_drone_landed(mavs):
+            mavs[0].rate.sleep()
         for mav in mavs:
             mav.takeoff(5)
+            mav.rate.sleep()
+        t=0
         while t < 60*T:
             for mav in mavs:
                 mav.set_position(final_pose[0] - t*final_pose[0]/(60*T), final_pose[1] - t*final_pose[1]/(60*T), 5)
-            t += 1/2.0
+            mavs[0].rate.sleep()
+            t += 2
         for mav in mavs:
-            mav.RTL()
+            mav.land()
         return 'done'
 
 

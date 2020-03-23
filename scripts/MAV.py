@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 '''
+
 General class for Micro Air Vehicle
 
 This class cannot be used to single MAV control, only swarms.
@@ -25,6 +26,8 @@ from mavros_msgs.msg import State, ExtendedState
 from sensor_msgs.msg import BatteryState
 from mavros_msgs.msg import Mavlink
 
+
+
 TOL = 0.5
 MAX_TIME_DISARM = 15
 CONFIG = {"mavros_local_position_pub"       : "/mavros/setpoint_position/local",
@@ -34,9 +37,12 @@ CONFIG = {"mavros_local_position_pub"       : "/mavros/setpoint_position/local",
                 "mavros_arm"                : "/mavros/cmd/arming",
                 "mavros_set_mode"           : "/mavros/set_mode",
                 "mavros_battery_sub"        : "/mavros/battery",
-                "mavros_extended_status"    : "/mavros/extended_status"}
-class MAV:
+                "mavros_extended_state"    : "/mavros/extended_state",
+                "tello_velocity_pub"       : "/tello/cmd_vel",
+                "tello_battery_sub"        : "/tello/battery"}
 
+
+class MAV:
     def __init__(self, mav_id, mav_type="mavros"):
         #rospy.init_node("MAV_" + mav_id)
         self.rate = rospy.Rate(60)
@@ -54,7 +60,7 @@ class MAV:
         self.local_atual        = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_local_atual"]), PoseStamped, self.local_callback)
         self.state_sub          = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_set_mode"]), State, self.state_callback)
         self.battery_sub        = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_battery_sub"]), BatteryState, self.battery_callback)
-        self.extended_state_sub = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_extended_status"]), ExtendedState, self.extended_state_callback, queue_size=2)
+        self.extended_state_sub = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_extended_state"]), ExtendedState, self.extended_state_callback, queue_size=2)
         ####################### Services ######################
         self.arm                = rospy.ServiceProxy("uav{}/{}".format(mav_id, CONFIG[mav_type + "_arm"]), CommandBool)
         self.set_mode           = rospy.ServiceProxy("uav{}/{}".format(mav_id, CONFIG[mav_type + "_set_mode"]), SetMode)
@@ -86,7 +92,7 @@ class MAV:
     ####### Set Position and Velocity ################
     def set_position(self, x, y, z):
         if self.drone_state != "OFFBOARD":
-            rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
+            #rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
             self.set_mode(custom_mode = "OFFBOARD")
         self.goal_pose.pose.position.x = x
         self.goal_pose.pose.position.y = y
@@ -111,112 +117,23 @@ class MAV:
             return False
 
     def takeoff(self, height):
-        velocity = 1.0
-        part = velocity/60.0
-        
+        rospy.logwarn("ARMING DRONE")
+        self.arm(True)
 
-        while not self.drone_state.armed:
-            rospy.logwarn("ARMING DRONE")
-            self.arm(True)
-            self.rate.sleep()
-            if self.drone_state != "OFFBOARD":
-                rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
-                self.set_mode(custom_mode = "AUTO.TAKEOFF")
-                
-            break
-        # t=0
-        # t += 150*part
-        # while not rospy.is_shutdown() and self.drone_pose.pose.position.z <= height:
-        #     rospy.loginfo('Executing State TAKEOFF')
-
-        #     if self.drone_state != "OFFBOARD":
-        #         rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
-        #         self.set_mode(custom_mode = "OFFBOARD")
-
-        #     if not self.drone_state.armed:
-        #         rospy.logwarn("ARMING DRONE")
-        #         self.arm(True)
-        #     else:
-        #         rospy.loginfo("DRONE ARMED")
-        #     # @TODO use VELOCITY control, instead of position
-        #     if t < height:
-        #         rospy.logwarn('TAKING OFF AT ' + str(velocity) + ' m/s')
-        #         self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, t)
-        #         t += part
-        #     else:
-        #         self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, height)
-
-        #     rospy.loginfo('Position: (' + str(self.drone_pose.pose.position.x) + ', ' + str(self.drone_pose.pose.position.y) + ', '+ str(self.drone_pose.pose.position.z) + ')')
-        #     self.rate.sleep()
-
-        # self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, height)
-
+        self.set_mode(custom_mode = "AUTO.TAKEOFF")
         return "done"
 
 
     def RTL(self):
-        velocity = 0.3
-        ds = velocity/60.0
+        self.set_mode(custom_mode = "AUTO.RTL")
 
-        self.rate.sleep()
-        height = self.drone_pose.pose.position.z
-        rospy.loginfo('Position: (' + str(self.drone_pose.pose.position.x) + ', ' + str(self.drone_pose.pose.position.y) + ', ' + str(self.drone_pose.pose.position.z) + ')')
-
-        self.set_position(0,0,height)
-        self.rate.sleep()
-        rospy.loginfo('Position: (' + str(self.drone_pose.pose.position.x) + ', ' + str(self.drone_pose.pose.position.y) + ', ' + str(self.drone_pose.pose.position.z) + ')')
-        rospy.loginfo('Goal Position: (' + str(self.goal_pose.pose.position.x) + ', ' + str(self.goal_pose.pose.position.y) + ', ' + str(self.goal_pose.pose.position.z) + ')')
-
-
-        while not self.chegou():
-            rospy.loginfo('Executing State RTL')
-            rospy.loginfo("STARING HOME")
-            self.set_position(0,0,height)
-            self.rate.sleep()
-
-        t=0
-        self.set_position(0,0,height-ds)
-        self.rate.sleep()
-
-        init_time = rospy.get_rostime().secs
-        #while not (self.drone_pose.pose.position.z < -0.1) and rospy.get_rostime().secs - init_time < (height/velocity)*1.3: #30% tolerance in time
-        while not self.LAND_STATE == ExtendedState.LANDED_STATE_ON_GROUND:
-            rospy.loginfo('Executing State RTL')
-
-            rospy.loginfo('Height: ' + str(abs(self.drone_pose.pose.position.z)))
-            ################# Velocity Control #################
-            self.set_vel(0, 0, -velocity, 0, 0, 0)
-            rospy.loginfo('LANDING AT ' + str(velocity) + 'm/s')
-            self.rate.sleep()
-        rospy.logwarn("LANDED_STATE: ON GROUND\nDISARMING")
-        self.arm(False)
-        return "succeeded"
-
-    def hold(self, time):
-        now = rospy.Time.now()
-        bar = ChargingBar("Holding Position", max=time*60)
-        while not rospy.Time.now() - now > rospy.Duration(secs=time):
-            bar.next()
-            self.local_position_pub.publish(self.drone_pose)
-            self.rate.sleep()
-        bar.finish()
-    
 
     def land(self):
-        # velocity = 0.3
-        # height = self.drone_pose.pose.position.z
-        # init_time = rospy.get_rostime().secs
-        # #while not (self.drone_pose.pose.position.z < 0.4 and not rospy.is_shutdown()) or  self.LAND_STATE == ExtendedState.LANDED_STATE_ON_GROUND:
-        # while not self.LAND_STATE == ExtendedState.LANDED_STATE_ON_GROUND:
-        #     rospy.logwarn('Landing')
-        #     rospy.loginfo('Height: ' + str(abs(self.drone_pose.pose.position.z)))
-        #     ################# Velocity Control #################
-        #     self.set_vel(0, 0, -velocity, 0, 0, 0)
-        #     self.rate.sleep()
-
         self.set_mode(custom_mode="AUTO.LAND")
         rospy.logwarn("LANDED_STATE: ON GROUND\nDISARMING")
-        self.arm(False)
+        self.rate.sleep()
+        if self.LAND_STATE == ExtendedState.LANDED_STATE_ON_GROUND:
+            self.arm(False)
         return "succeeded"
 
     def _disarm(self):
