@@ -16,18 +16,21 @@ class Takeoff(smach.State):
         self.counter = 0
 
     def execute(self, userdata):
-        global mav
+        global mavs
         rospy.loginfo('Executing state Takeoff\n')
 
         p_bar = ChargingBar("ROS SETUP", max=300)
-        mav.set_position(0,0,0)
+        for mav in mavs:
+            mav.set_position(0,0,0)
         for i in range(300):
-            mav.local_position_pub.publish(mav.goal_pose)
-            mav.rate.sleep()
+            for mav in mavs:
+                mav.local_position_pub.publish(mav.goal_pose)
+            mavs[0].rate.sleep() # 0th always exists
             p_bar.next()
         p_bar.finish()
         rospy.loginfo("SETUP COMPLETE")
-        result = mav.takeoff(5)
+        for mav in mavs:
+            result = mav.takeoff(5)
         return result
 
 class Mission(smach.State):
@@ -43,19 +46,32 @@ class Mission(smach.State):
         
         final_pose = (4, 3)
         
-        i=0
+        i = 0
         t=0
         T=10
+        for mav in mavs:
+            mav.set_position(mav.drone_pose.pose.position.x, 
+                            mav.drone_pose.pose.position.y,
+                            mav.drone_pose.pose.position.z)
+        for i in range(300):
+            for mav in mavs:
+                mav.local_position_pub.publish(mav.goal_pose)
+            mavs[0].rate.sleep() # 0th always exists
 
         while t < 60*T:
-            mav.set_position(t*final_pose[0]/(60*T), t*final_pose[1]/(60*T), 5)
+            for mav in mavs:
+                mav.set_position(t*final_pose[0]/(60*T), t*final_pose[1]/(60*T), 5)
             t += 1/2.0
-        mav.land()
-        mav.takeoff(5)
+        for mav in mavs:
+            mav.land()
+        for mav in mavs:
+            mav.takeoff(5)
         while t < 60*T:
-            mav.set_position(final_pose[0] - t*final_pose[0]/(60*T), final_pose[1] - t*final_pose[1]/(60*T), 5)
+            for mav in mavs:
+                mav.set_position(final_pose[0] - t*final_pose[0]/(60*T), final_pose[1] - t*final_pose[1]/(60*T), 5)
             t += 1/2.0
-        mav.RTL()
+        for mav in mavs:
+            mav.RTL()
         return 'done'
 
 
@@ -64,16 +80,22 @@ class ReturnToLand(smach.State):
         smach.State.__init__(self, outcomes=['succeeded'])
 
     def execute(self, userdata):
-        global mav
+        global mavs
         rospy.loginfo('Executing state RTL')
-        mav.RTL()
-        mav.arm(False)
+        for mav in mavs:
+            mav.RTL()
+        for mav in mavs:
+            mav.arm(False)
         return 'succeeded'
 
 
 rospy.init_node('drone_state_machine', anonymous = True)
 
-mav = MAV("1", "mavros")
+mavs = []
+for i in range(9):
+    mavs.append(MAV(i, "mavros"))
+
+#mavs = [MAV(0, "mavros"), MAV(1, "mavros")]
 def main():
     # Create a SMACH state machine
     #rospy.init_node("State Machine")
