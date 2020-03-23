@@ -6,6 +6,7 @@ from progress.bar import ChargingBar
 import smach_ros
 import mavros_msgs
 from mavros_msgs import srv
+from mavros_msgs.srv import SetMode, CommandBool
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from mavros_msgs.msg import State, ExtendedState
 from sensor_msgs.msg import BatteryState
@@ -16,11 +17,11 @@ TOL = 0.5
 MAX_TIME_DISARM = 15
 CONFIG = {"mavros_local_position_pub" : "/mavros/setpoint_position/local",
                 "mavros_velocity_pub" : "/mavros/setpoint_velocity/cmd_vel",
-                "mavros_local_atual" : "/mavros/local_position/pose",
-                "mavros_state_sub" : "/mavros/state",
-                "mavros_arm" : "/mavros/cmd/arming",
-                "mavros_set_mode" : "/mavros/set_mode",
-                "mavros_battery_sub" : "/mavros/battery"}
+                "mavros_local_atual" :  "/mavros/local_position/pose",
+                "mavros_state_sub" :    "/mavros/state",
+                "mavros_arm" :          "/mavros/cmd/arming",
+                "mavros_set_mode" :     "/mavros/set_mode",
+                "mavros_battery_sub" :  "/mavros/battery"}
 class MAV:
     
                 #"bebop_velocity_pub" : "/bebop/setpoint_velocity/cmd_vel"}
@@ -49,8 +50,8 @@ class MAV:
         self.battery_sub = rospy.Subscriber(CONFIG[mav_type + "_battery_sub"], BatteryState, self.battery_callback)
         self.extended_state_sub = rospy.Subscriber("/mavros/extended_status", ExtendedState, self.extended_state_callback, queue_size=2)
         ############# Services ##################
-        self.arm = rospy.ServiceProxy(CONFIG[mav_type + "_arm"], mavros_msgs.srv.CommandBool)
-        self.set_mode = rospy.ServiceProxy(CONFIG[mav_type + "_set_mode"], mavros_msgs.srv.SetMode)
+        self.arm = rospy.ServiceProxy(CONFIG[mav_type + "_arm"], CommandBool)
+        self.set_mode = rospy.ServiceProxy(CONFIG[mav_type + "_set_mode"], SetMode)
 
         self.LAND_STATE = ExtendedState.LANDED_STATE_UNDEFINED # landing state
         '''
@@ -101,10 +102,10 @@ class MAV:
             return False
 
     def takeoff(self, height):
-        velocity = 1
+        velocity = 1.0
         part = velocity/60.0
         rospy.loginfo("OFFBOARD MODE SETUP")
-        for i in range(100):
+        for i in range(300):
             self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, 0)
             self.rate.sleep()
 
@@ -114,7 +115,7 @@ class MAV:
             self.rate.sleep()
             if self.drone_state != "OFFBOARD":
                 rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
-                self.set_mode(custom_mode = "OFFBOARD")
+                self.set_mode(custom_mode = "AUTO.TAKEOFF")
 
         t=0
         t += 150*part
