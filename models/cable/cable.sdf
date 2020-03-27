@@ -1,0 +1,82 @@
+link name="cable0">
+      <pose>-2.216676 -1.332671 2.601673 -2.502679 0.853663 -1.883915</pose>
+      <visual name="visual">
+        <geometry>
+          <cylinder>
+            <radius>0.005</radius>
+            <length>9.86257572848</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <script>
+            <uri>file://media/materials/scripts/kitchen.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+        </material>
+      </visual>
+      <inertial>
+        <inertia>
+          <ixx>0.001</ixx>
+          <iyy>0.001</iyy>
+          <izz>0.001</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+        <mass>0.001</mass>
+      </inertial>
+    </link>
+    <link name="virt_X0">
+      <inertial>
+        <inertia>
+          <ixx>0.001</ixx>
+          <iyy>0.001</iyy>
+          <izz>0.001</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+        <mass>0.001</mass>
+      </inertial>
+      <pose>-3.500000 -2.000000 3.500000 -2.502679 0.853663 -1.883915</pose>
+    <link name="virt_Y0">
+      <inertial>
+        <inertia>
+          <ixx>0.001</ixx>
+          <iyy>0.001</iyy>
+          <izz>0.001</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+        <mass>0.001</mass>
+      </inertial>
+      <pose>-3.500000 -2.000000 3.500000 -2.502679 0.853663 -1.883915</pose>
+    <link name="virt_Xpf0">
+      <inertial>
+        <inertia>
+          <ixx>0.001</ixx>
+          <iyy>0.001</iyy>
+          <izz>0.001</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+        <mass>0.001</mass>
+      </inertial>
+      <pose>1.500000 0.600000 0.000000 -2.502679 0.853663 -1.883915</pose>
+    </link>
+    <link name="virt_Ypf0">
+      <inertial>
+        <inertia>
+          <ixx>0.001</ixx>
+          <iyy>0.001</iyy>
+          <izz>0.001</izz>
+          <ixy>0</ixy>
+          <ixz>0</ixz>
+          <iyz>0</iyz>
+        </inertia>
+        <mass>0.001</mass>
+      </inertial>
+      <pose>1.500000 0.600000 0.000000 -2.502679 0.853663 -1.883915</pose>
+    </link>

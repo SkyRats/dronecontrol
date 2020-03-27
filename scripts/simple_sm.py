@@ -110,7 +110,7 @@ class ReturnToLand(smach.State):
 rospy.init_node('drone_state_machine', anonymous = True)
 
 mavs = []
-for i in range(9):
+for i in range(2):
     mavs.append(MAV(i, "mavros"))
 
 #mavs = [MAV(0, "mavros"), MAV(1, "mavros")]
