@@ -7,7 +7,7 @@ from MAV import MAV
 import threading
 from std_msgs.msg import Bool
 from progress.bar import ChargingBar
-from mavros_msgs.msg import ExtendedState
+#from mavros_msgs.msg import ExtendedState
 
 # define state Takeoff
 class Takeoff(smach.State):
@@ -44,7 +44,8 @@ class Mission(smach.State):
         result = True
         for mav in mavs:
             print(mav.LAND_STATE)
-            if mav.LAND_STATE == ExtendedState.LANDED_STATE_ON_GROUND:
+            #if mav.LAND_STATE == ExtendedState.LANDED_STATE_ON_GROUND:
+            if True:
                 result = result and True
             else:
                 result = result and False

@@ -1,21 +1,17 @@
 <?xml version="1.0"?>
 <sdf version="1.5">
-  <world name="indoor_world">
+  <world name="empty">
     <include><!-- Add in a light source -->
       <uri>model://sun</uri>
     </include>
     <include><!-- Add in a ground -->
       <uri>model://asphalt_plane</uri>
     </include>
-    <include>
-      <uri>/home/caio/mavros_ws/src/dronecontrol/models/cable</uri>
+    <include><!-- Add in box -->
+      <uri>model://box</uri>
+      <pose>0.5 1 0.2 0 0 0</pose>
     </include>
-    <include><!-- PRATELEIRAS -->
-      <static>false</static>
-      <uri>/home/caio/mavros_ws/src/dronecontrol/models/prateleira</uri>
-      <name>prateleira1</name>
-      <pose>0 0 0 0 0 1.570796325</pose>
-    </include>
+    
     <physics name='default_physics' default='0' type='ode'>
       <gravity>0 0 -9.8066</gravity>
       <ode>

@@ -30,14 +30,14 @@ from mavros_msgs.msg import Mavlink
 
 TOL = 0.5
 MAX_TIME_DISARM = 15
-CONFIG = {"mavros_local_position_pub"       : "/mavros/setpoint_position/local",
-                "mavros_velocity_pub"       : "/mavros/setpoint_velocity/cmd_vel",
-                "mavros_local_atual"        : "/mavros/local_position/pose",
-                "mavros_state_sub"          : "/mavros/state",
-                "mavros_arm"                : "/mavros/cmd/arming",
-                "mavros_set_mode"           : "/mavros/set_mode",
-                "mavros_battery_sub"        : "/mavros/battery",
-                "mavros_extended_state"    : "/mavros/extended_state",
+CONFIG = {"mavros_local_position_pub"       : "mavros/setpoint_position/local",
+                "mavros_velocity_pub"       : "mavros/setpoint_velocity/cmd_vel",
+                "mavros_local_atual"        : "mavros/local_position/pose",
+                "mavros_state_sub"          : "mavros/state",
+                "mavros_arm"                : "mavros/cmd/arming",
+                "mavros_set_mode"           : "mavros/set_mode",
+                "mavros_battery_sub"        : "mavros/battery",
+                "mavros_extended_state"     : "mavros/extended_state",
                 "tello_velocity_pub"       : "/tello/cmd_vel",
                 "tello_battery_sub"        : "/tello/battery"}
 
