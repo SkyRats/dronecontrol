@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 import smach
@@ -13,7 +13,7 @@ from sensor_msgs.msg import BatteryState
 from mavros_msgs.msg import Mavlink
 
 
-TOL = 0.5
+TOL = 0.2
 MAX_TIME_DISARM = 15
 CONFIG = {"mavros_local_position_pub" : "/mavros/setpoint_position/local",
                 "mavros_velocity_pub" : "/mavros/setpoint_velocity/cmd_vel",
@@ -22,12 +22,13 @@ CONFIG = {"mavros_local_position_pub" : "/mavros/setpoint_position/local",
                 "mavros_arm" :          "/mavros/cmd/arming",
                 "mavros_set_mode" :     "/mavros/set_mode",
                 "mavros_battery_sub" :  "/mavros/battery"}
+                #"bebop_velocity_pub" : "/bebop/setpoint_velocity/cmd_vel"}
 class MAV:
     
-                #"bebop_velocity_pub" : "/bebop/setpoint_velocity/cmd_vel"}
+               
 
     def __init__(self, mav_name, mav_type="mavros"):
-        #rospy.init_node("MAV_" + mav_name)
+        #rospy.init_node("MAV_{}".format(mav_name))
         self.rate = rospy.Rate(60)
 
         self.drone_pose = PoseStamped()
@@ -93,6 +94,7 @@ class MAV:
         self.goal_vel.twist.angular.x = roll
         self.goal_vel.twist.angular.y = pitch
         self.goal_vel.twist.angular.z = yaw
+        self.stamp = rospy.Time.now()
         self.velocity_pub.publish(self.goal_vel)
 
     def chegou(self):
@@ -109,17 +111,19 @@ class MAV:
             self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, 0)
             self.rate.sleep()
 
-        while not self.drone_state.armed:
-            rospy.logwarn("ARMING DRONE")
-            self.arm(True)
-            self.rate.sleep()
-            if self.drone_state != "OFFBOARD":
-                rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
-                self.set_mode(custom_mode = "AUTO.TAKEOFF")
+        #while not self.drone_state.armed: Todo verify state
+        rospy.logwarn("ARMING DRONE")
+        self.arm(True)
+        self.rate.sleep()
+        if self.drone_state != "AUTO.TAKEOFF":
+            rospy.loginfo("SETTING TAKEOFF FLIGHT MODE")
+            self.set_mode(custom_mode = "AUTO.TAKEOFF")
+
+
 
         t=0
         t += 150*part
-        while not rospy.is_shutdown() and self.drone_pose.pose.position.z <= height:
+        while not rospy.is_shutdown() and self.drone_pose.pose.position.z - height >= TOL:
             rospy.loginfo('Executing State TAKEOFF')
 
             if self.drone_state != "OFFBOARD":
@@ -212,9 +216,9 @@ class MAV:
 
     def _disarm(self):
         rospy.logwarn("DISARM MAV")
-        if drone_pose.pose.position.z < TOL:
+        if self.drone_pose.pose.position.z < TOL:
             for i in range(3):
-                rospy.loginfo('Drone height' + str(drone_pose.pose.position.z))
+                rospy.loginfo('Drone height' + str(self.drone_pose.pose.position.z))
                 self.arm(False)
         else:
             rospy.logwarn("Altitude too high for disarming!")
@@ -222,6 +226,6 @@ class MAV:
             self.arm(False)
 
 if __name__ == '__main__':
-    mav = MAV("1") #MAV name
+    mav = MAV(1) #MAV name
     mav.takeoff(3)
     mav.RTL()

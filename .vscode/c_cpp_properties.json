@@ -1,0 +1,32 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "",
+        "limitSymbolsToIncludedHeaders": true
+      },
+      "includePath": [
+        "/home/caio/mavros_ws/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/home/caio/tello_ws/devel/include/**",
+        "/home/caio/tello_ws/src/srv_tools/bag_tools/include/**",
+        "/home/caio/tello_ws/src/fast/include/**",
+        "/home/caio/tello_ws/src/h264_image_transport/include/**",
+        "/home/caio/mavros_ws/src/mavros/libmavconn/include/**",
+        "/home/caio/mavros_ws/src/mavros/mavros/include/**",
+        "/home/caio/mavros_ws/src/mavros/mavros_msgs/include/**",
+        "/home/caio/tello_ws/src/robot_localization/include/**",
+        "/home/caio/tello_ws/src/simulation/include/**",
+        "/home/caio/tello_ws/src/rpg_svo/svo/include/**",
+        "/home/caio/tello_ws/src/rpg_svo/svo_ros/include/**",
+        "/home/caio/mavros_ws/src/mavros/test_mavros/include/**",
+        "/home/caio/tello_ws/src/usb_cam/include/**",
+        "/home/caio/tello_ws/src/rpg_vikit/vikit_common/include/**",
+        "/home/caio/tello_ws/src/rpg_vikit/vikit_ros/include/**",
+        "/home/caio/mavros_ws/src/viscon/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS"
+    }
+  ]
+}
