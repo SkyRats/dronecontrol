@@ -115,9 +115,7 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-include_directories(
-  #${catkin_INCLUDE_DIRS}
-)
+include_directories(${catkin_INCLUDE_DIRS})
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -131,8 +129,8 @@ include_directories(
 #add_executable(controle.cpp src/controle.cpp)
 #add_executable(trajectorys.cpp src/trajectorys.cpp)
 
-#add_executable(integracao_controle.cpp src/integracao_controle.cpp) descomentar
-#target_link_libraries(integracao_controle.cpp ${catkin_LIBRARIES})
+add_executable(mavros_test_node.cpp src/mavros_test_node.cpp)
+target_link_libraries(mavros_test_node.cpp ${catkin_LIBRARIES})
 
 #add_executable(servo_control.cpp src/servo_control.cpp)
 #target_link_libraries(servo_control.cpp ${catkin_LIBRARIES})
