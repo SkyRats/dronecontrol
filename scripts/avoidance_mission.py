@@ -49,7 +49,7 @@ def run():
         if mav.drone_state != "OFFBOARD":
             rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
             mav.set_mode(custom_mode = "OFFBOARD")
-        mav.set_vel(F[0], F[1], 0)
+        mav.set_position_target(4067, -1, -1, mav.drone_pose.pose.position.z,F[0], F[1])
 
 
 

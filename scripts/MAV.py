@@ -8,7 +8,7 @@ import mavros_msgs
 from mavros_msgs import srv
 from mavros_msgs.srv import SetMode, CommandBool
 from geometry_msgs.msg import PoseStamped, TwistStamped
-from mavros_msgs.msg import State, ExtendedState
+from mavros_msgs.msg import State, ExtendedState, PositionTarget
 from sensor_msgs.msg import BatteryState
 from mavros_msgs.msg import Mavlink
 
@@ -17,6 +17,7 @@ TOL = 0.2
 MAX_TIME_DISARM = 15
 CONFIG = {"mavros_local_position_pub" : "/mavros/setpoint_position/local",
                 "mavros_velocity_pub" : "/mavros/setpoint_velocity/cmd_vel",
+                "mavros_target_pub" :   "/mavros/setpoint_raw/local",
                 "mavros_local_atual" :  "/mavros/local_position/pose",
                 "mavros_state_sub" :    "/mavros/state",
                 "mavros_arm" :          "/mavros/cmd/arming",
@@ -34,11 +35,13 @@ class MAV:
         self.drone_pose = PoseStamped()
         self.goal_pose = PoseStamped()
         self.goal_vel = TwistStamped()
+        self.pose_target = PositionTarget()
         self.drone_state = State()
         self.battery = BatteryState()
         # ############## Publishers ##############
         self.local_position_pub = rospy.Publisher(CONFIG[mav_type + "_local_position_pub"], PoseStamped, queue_size = 20)
         self.velocity_pub = rospy.Publisher(CONFIG[mav_type + "_velocity_pub"],  TwistStamped, queue_size=5)
+        self.target_pub = rospy.Publisher(CONFIG[mav_type + "_target_pub"], PositionTarget, queue_size=5)
 
         ################### Swarm ###########
         # self.local_position_pub = rospy.Publisher(mav_name + "/setpoint_position/local", PoseStamped, queue_size = 20)
@@ -96,6 +99,29 @@ class MAV:
         self.goal_vel.twist.angular.z = yaw
         self.stamp = rospy.Time.now()
         self.velocity_pub.publish(self.goal_vel)
+    
+    def set_position_target(self, type_mask, x_position=0, y_position=0, z_position=0, x_velocity=0, y_velocity=0, z_velocity=0, x_aceleration=0, y_aceleration=0, z_aceleration=0, yaw=0, yaw_rate=0):
+        self.pose_target.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED
+        self.pose_target.type_mask = type_mask
+        #https://mavlink.io/en/messages/common.html#POSITION_TARGET_TYPEMASK
+        #4095 ignores every dimension (subtract the usefull ones from it)
+
+        self.pose_target.position.x = x_position
+        self.pose_target.position.y = y_position
+        self.pose_target.position.z = z_position
+
+        self.pose_target.velocity.x = x_velocity
+        self.pose_target.velocity.y = y_velocity
+        self.pose_target.velocity.z = z_velocity
+
+        self.pose_target.acceleration_or_force.x = x_aceleration
+        self.pose_target.acceleration_or_force.y = y_aceleration
+        self.pose_target.acceleration_or_force.z = z_aceleration
+
+        self.pose_target.yaw = yaw
+        self.pose_target.yaw_rate = yaw_rate
+
+        self.target_pub.publish(pose_target)
 
     def chegou(self):
         if (abs(self.goal_pose.pose.position.x - self.drone_pose.pose.position.x) < TOL) and (abs(self.goal_pose.pose.position.y - self.drone_pose.pose.position.y) < TOL) and (abs(self.goal_pose.pose.position.z - self.drone_pose.pose.position.z) < TOL):
