@@ -23,14 +23,13 @@ CONFIG = {"mavros_local_position_pub" : "/mavros/setpoint_position/local",
                 "mavros_arm" :          "/mavros/cmd/arming",
                 "mavros_set_mode" :     "/mavros/set_mode",
                 "mavros_battery_sub" :  "/mavros/battery"}
-                #"bebop_velocity_pub" : "/bebop/setpoint_velocity/cmd_vel"}
 class MAV:
     
                
 
     def __init__(self, mav_name, mav_type="mavros"):
-        #rospy.init_node("MAV_{}".format(mav_name))
         self.rate = rospy.Rate(60)
+        self.desired_state = ""
 
         self.drone_pose = PoseStamped()
         self.goal_pose = PoseStamped()
@@ -55,7 +54,7 @@ class MAV:
         self.extended_state_sub = rospy.Subscriber("/mavros/extended_status", ExtendedState, self.extended_state_callback, queue_size=2)
         ############# Services ##################
         self.arm = rospy.ServiceProxy(CONFIG[mav_type + "_arm"], CommandBool)
-        self.set_mode = rospy.ServiceProxy(CONFIG[mav_type + "_set_mode"], SetMode)
+        self.set_mode_srv = rospy.ServiceProxy(CONFIG[mav_type + "_set_mode"], SetMode)
 
         self.LAND_STATE = ExtendedState.LANDED_STATE_UNDEFINED # landing state
         '''
@@ -69,6 +68,9 @@ class MAV:
     ###### Callback Functions ##########
     def state_callback(self, state_data):
         self.drone_state = state_data
+        if self.drone_state.mode != self.desired_state:
+            #rospy.loginfo("Setting {} flight mode".format(self.desired_state))
+            self.set_mode_srv(0, self.desired_state)
 
     def battery_callback(self, bat_data):
         self.battery = bat_data
@@ -100,8 +102,36 @@ class MAV:
         self.stamp = rospy.Time.now()
         self.velocity_pub.publish(self.goal_vel)
     
+    def set_mode(self, mode, timeout):
+        """mode: PX4 mode string, timeout(int): seconds"""
+        rospy.loginfo("setting FCU mode: {0}".format(mode))
+        self.desired_state = mode
+        old_mode = self.drone_state.mode
+        loop_freq = 1  # Hz
+        loop_rate = rospy.Rate(loop_freq)
+        mode_set = False
+        for i in range(timeout * loop_freq):
+            if self.drone_state.mode == mode:
+                mode_set = True
+                rospy.loginfo("set mode success | seconds: {0} of {1}".format(
+                    i / loop_freq, timeout))
+                break
+            else:
+                try:
+                    result = self.set_mode_srv(0, mode)  # 0 is custom mode
+                    if not result.mode_sent:
+                        rospy.logerr("failed to send mode command")
+                except rospy.ServiceException as e:
+                    rospy.logerr(e)
+
+            try:
+                loop_rate.sleep()
+            except rospy.ROSException as e:
+                rospy.logerr(e)
+
+
     def set_position_target(self, type_mask, x_position=0, y_position=0, z_position=0, x_velocity=0, y_velocity=0, z_velocity=0, x_aceleration=0, y_aceleration=0, z_aceleration=0, yaw=0, yaw_rate=0):
-        self.pose_target.coordinate_frame = mavros_msgs::PositionTarget::FRAME_LOCAL_NED
+        self.pose_target.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
         self.pose_target.type_mask = type_mask
         #https://mavlink.io/en/messages/common.html#POSITION_TARGET_TYPEMASK
         #4095 ignores every dimension (subtract the usefull ones from it)
@@ -121,7 +151,7 @@ class MAV:
         self.pose_target.yaw = yaw
         self.pose_target.yaw_rate = yaw_rate
 
-        self.target_pub.publish(pose_target)
+        self.target_pub.publish(self.pose_target)
 
     def chegou(self):
         if (abs(self.goal_pose.pose.position.x - self.drone_pose.pose.position.x) < TOL) and (abs(self.goal_pose.pose.position.y - self.drone_pose.pose.position.y) < TOL) and (abs(self.goal_pose.pose.position.z - self.drone_pose.pose.position.z) < TOL):
@@ -132,36 +162,24 @@ class MAV:
     def takeoff(self, height):
         velocity = 1.0
         part = velocity/60.0
-        rospy.loginfo("OFFBOARD MODE SETUP")
-        for i in range(300):
+        inicial_height = (0.8 * 60 * part) / velocity
+        for i in range(100):
             self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, 0)
             self.rate.sleep()
+        self.set_mode("OFFBOARD", 5)
 
-        #while not self.drone_state.armed: Todo verify state
         rospy.logwarn("ARMING DRONE")
-        self.arm(True)
+        fb = self.arm(True)
+        while not fb.success:
+            rospy.logwarn("ARMING DRONE {}".format(fb))
+            fb = self.arm(True)
+            self.rate.sleep()
+        rospy.loginfo("DRONE ARMED")
         self.rate.sleep()
-        if self.drone_state != "AUTO.TAKEOFF":
-            rospy.loginfo("SETTING TAKEOFF FLIGHT MODE")
-            self.set_mode(custom_mode = "AUTO.TAKEOFF")
-
-
 
         t=0
-        t += 150*part
-        while not rospy.is_shutdown() and self.drone_pose.pose.position.z - height >= TOL:
-            rospy.loginfo('Executing State TAKEOFF')
-
-            if self.drone_state != "OFFBOARD":
-                rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
-                self.set_mode(custom_mode = "OFFBOARD")
-
-            if not self.drone_state.armed:
-                rospy.logwarn("ARMING DRONE")
-                self.arm(True)
-            else:
-                rospy.loginfo("DRONE ARMED")
-            # @TODO use VELOCITY control, instead of position
+        t += inicial_height
+        while abs(self.drone_pose.pose.position.z - height) >= TOL and not rospy.is_shutdown():
             if t < height:
                 rospy.logwarn('TAKING OFF AT ' + str(velocity) + ' m/s')
                 self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, t)
@@ -175,7 +193,6 @@ class MAV:
         self.set_position(self.drone_pose.pose.position.x, self.drone_pose.pose.position.y, height)
 
         return "done"
-
 
     def RTL(self):
         velocity = 0.3
