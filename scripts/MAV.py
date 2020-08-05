@@ -42,11 +42,6 @@ class MAV:
         self.velocity_pub = rospy.Publisher(CONFIG[mav_type + "_velocity_pub"],  TwistStamped, queue_size=5)
         self.target_pub = rospy.Publisher(CONFIG[mav_type + "_target_pub"], PositionTarget, queue_size=5)
 
-        ################### Swarm ###########
-        # self.local_position_pub = rospy.Publisher(mav_name + "/setpoint_position/local", PoseStamped, queue_size = 20)
-        # self.velocity_pub = rospy.Publisher(mav_name + "/setpoint_velocity/cmd_vel",  TwistStamped, queue_size=5)
-
-        #self.mavlink_pub = rospy.Publisher('/mavlink/to', Mavlink, queue_size=1)
         ########## Subscribers ##################
         self.local_atual = rospy.Subscriber(CONFIG[mav_type + "_local_atual"], PoseStamped, self.local_callback)
         self.state_sub = rospy.Subscriber(CONFIG[mav_type + "_set_mode"], State, self.state_callback)

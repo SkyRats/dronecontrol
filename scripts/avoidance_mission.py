@@ -26,7 +26,10 @@ def run():
     
     d = (mav.drone_pose.pose.position.x - goal[0])**2 + (mav.drone_pose.pose.position.y - goal[1])**2
     d = np.sqrt(d)
-    #euler_orientation = euler_from_quaternion(ros_numpy.numpify(mav.drone_pose.pose.orientation))
+    roll, pitch, yaw = euler_from_quaternion([mav.drone_pose.pose.orientation.x,
+                                                mav.drone_pose.pose.orientation.y,
+                                                mav.drone_pose.pose.orientation.z,
+                                                mav.drone_pose.pose.orientation.w])
     if mav.drone_pose.pose.orientation.w == 0.0:
         theta_goal = 0.0
     else:
