@@ -79,6 +79,11 @@ class MAV:
         self.drone_pose.pose.position.x = local.pose.position.x
         self.drone_pose.pose.position.y = local.pose.position.y
         self.drone_pose.pose.position.z = local.pose.position.z
+        
+        self.drone_pose.pose.orientation.x = local.pose.orientation.x
+        self.drone_pose.pose.orientation.y = local.pose.orientation.y
+        self.drone_pose.pose.orientation.z = local.pose.orientation.z
+        self.drone_pose.pose.orientation.w = local.pose.orientation.w
 
     def extended_state_callback(self, es_data):
         self.LAND_STATE = es_data.landed_state
