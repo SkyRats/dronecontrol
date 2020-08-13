@@ -27,7 +27,7 @@ def run():
     rospy.init_node("avoidance")
     laser_sub = rospy.Subscriber("/laser/scan", LaserScan, laser_callback, queue_size=1)
     mav = MAV("1")
-    goal = np.array([20, 0])
+    goal = np.array([15, 0])
     initial_height = 1.5
     mav.takeoff(initial_height)
 
@@ -75,14 +75,11 @@ def run():
             else:
                 theta_goal = -1*np.arctan(abs(deltaY/deltaX))
         ##################################################################################
-        if theta_goal - euler_orientation[2] >= 0:
-            theta_rel = theta_goal - euler_orientation[2]
-        else: 
-            theta_rel = 6.28318530718 + (theta_goal - euler_orientation[2])
+        
         theta = laser_data.angle_min
         Ft = np.array([0.0, 0.0])
-        Fg = np.array([Ka*d*np.cos(theta_rel),
-                                    Ka*d*np.sin(theta_rel)])
+        Fg = np.array([Ka*d*np.cos(theta_goal),
+                                    Ka*d*np.sin(theta_goal)])
         #rospy.loginfo(laser_data)
         for laser_range in laser_data.ranges:
             theta += laser_data.angle_increment
@@ -99,7 +96,7 @@ def run():
                                 x_velocity=F[0],
                                 y_velocity=F[1],
                                 z_velocity=Kz*(initial_height - mav.drone_pose.pose.position.z),
-                                yaw_rate= Ky * euler_orientation[2])
+                                yaw_rate= 0)
                                 
     mav.land()
 
