@@ -27,7 +27,7 @@ def run():
     rospy.init_node("avoidance")
     laser_sub = rospy.Subscriber("/laser/scan", LaserScan, laser_callback, queue_size=1)
     mav = MAV("1")
-    goal = np.array([15, 0])
+    goal = np.array([8, 0])
     initial_height = 1.5
     mav.takeoff(initial_height)
 
@@ -85,8 +85,8 @@ def run():
             theta += laser_data.angle_increment
             if laser_range != "inf" and laser_range < mav.drone_pose.pose.position.z: # not sure if that's how we verify
                 Fi = Kr * ((a/((laser_range**b)*c)) + d*(laser_range-1.5) - 0.2)
-                Fix = -Fi*np.cos(theta)
-                Fiy = -Fi*np.sin(theta)
+                Fix = -Fi*np.cos(theta + drone_pose.pose.orientation.z)
+                Fiy = -Fi*np.sin(theta + drone_pose.pose.orientation.z)
                 Ft += np.array([Fix, Fiy])
 
         Fg = saturate(Fg)
@@ -96,7 +96,7 @@ def run():
                                 x_velocity=F[0],
                                 y_velocity=F[1],
                                 z_velocity=Kz*(initial_height - mav.drone_pose.pose.position.z),
-                                yaw_rate= 0)
+                                yaw_rate= 3)
                                 
     mav.land()
 
