@@ -53,17 +53,17 @@ class MAV:
         self.drone_state = State()
         self.battery = BatteryState()
         ####################### Publishers ####################
-        self.local_position_pub = rospy.Publisher("uav{}/{}".format(mav_id, CONFIG[mav_type + "_local_position_pub"]), PoseStamped, queue_size = 20)
-        self.velocity_pub       = rospy.Publisher("uav{}/{}".format(mav_id, CONFIG[mav_type + "_velocity_pub"]),  TwistStamped, queue_size=5)
+        self.local_position_pub = rospy.Publisher("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_local_position_pub"]), PoseStamped, queue_size = 20)
+        self.velocity_pub       = rospy.Publisher("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_velocity_pub"]),  TwistStamped, queue_size=5)
 
         ####################### Subscribers ###################
-        self.local_atual        = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_local_atual"]), PoseStamped, self.local_callback)
-        self.state_sub          = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_set_mode"]), State, self.state_callback)
-        self.battery_sub        = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_battery_sub"]), BatteryState, self.battery_callback)
-        self.extended_state_sub = rospy.Subscriber("uav{}/{}".format(mav_id, CONFIG[mav_type + "_extended_state"]), ExtendedState, self.extended_state_callback, queue_size=2)
+        self.local_atual        = rospy.Subscriber("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_local_atual"]), PoseStamped, self.local_callback)
+        self.state_sub          = rospy.Subscriber("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_set_mode"]), State, self.state_callback)
+        self.battery_sub        = rospy.Subscriber("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_battery_sub"]), BatteryState, self.battery_callback)
+        self.extended_state_sub = rospy.Subscriber("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_extended_state"]), ExtendedState, self.extended_state_callback, queue_size=2)
         ####################### Services ######################
-        self.arm                = rospy.ServiceProxy("uav{}/{}".format(mav_id, CONFIG[mav_type + "_arm"]), CommandBool)
-        self.set_mode           = rospy.ServiceProxy("uav{}/{}".format(mav_id, CONFIG[mav_type + "_set_mode"]), SetMode)
+        self.arm                = rospy.ServiceProxy("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_arm"]), CommandBool)
+        self.set_mode_srv = rospy.ServiceProxy("/uav{}/{}".format(mav_id, CONFIG[mav_type + "_set_mode"]), SetMode)
 
         self.LAND_STATE = ExtendedState.LANDED_STATE_UNDEFINED # landing state
         '''
@@ -72,12 +72,59 @@ class MAV:
         2: In air
         '''
 
+    def set_mode(self, mode, timeout):
+        """mode: PX4 mode string, timeout(int): seconds"""
+        rospy.loginfo("setting FCU mode: {0}".format(mode))
+        self.desired_state = mode
+        old_mode = self.drone_state.mode
+        loop_freq = 1  # Hz
+        loop_rate = rospy.Rate(loop_freq)
+        mode_set = False
+        for i in range(int(timeout * loop_freq)):
+            if self.drone_state.mode == mode:
+                mode_set = True
+                rospy.loginfo("set mode success | seconds: {0} of {1}".format(
+                    i / loop_freq, timeout))
+                break
+            else:
+                try:
+                    result = self.set_mode_srv(0, mode)  # 0 is custom mode
+                    if not result.mode_sent:
+                        rospy.logerr("failed to send mode command")
+                except rospy.ServiceException as e:
+                    rospy.logerr(e)
 
+            try:
+                loop_rate.sleep()
+            except rospy.ROSException as e:
+                rospy.logerr(e)
 
     ###### Callback Functions ##########
     def state_callback(self, state_data):
         self.drone_state = state_data
 
+    def set_position_target(self, type_mask, x_position=0, y_position=0, z_position=0, x_velocity=0, y_velocity=0, z_velocity=0, x_aceleration=0, y_aceleration=0, z_aceleration=0, yaw=0, yaw_rate=0):
+        self.pose_target.coordinate_frame = PositionTarget.FRAME_LOCAL_NED
+        self.pose_target.type_mask = type_mask
+        #https://mavlink.io/en/messages/common.html#POSITION_TARGET_TYPEMASK
+        #4095 ignores every dimension (subtract the usefull ones from it)
+
+        self.pose_target.position.x = x_position
+        self.pose_target.position.y = y_position
+        self.pose_target.position.z = z_position
+
+        self.pose_target.velocity.x = x_velocity
+        self.pose_target.velocity.y = y_velocity
+        self.pose_target.velocity.z = z_velocity
+
+        self.pose_target.acceleration_or_force.x = x_aceleration
+        self.pose_target.acceleration_or_force.y = y_aceleration
+        self.pose_target.acceleration_or_force.z = z_aceleration
+
+        self.pose_target.yaw = yaw
+        self.pose_target.yaw_rate = yaw_rate
+
+        self.target_pub.publish(self.pose_target)
     def battery_callback(self, bat_data):
         self.battery = bat_data
 
@@ -93,7 +140,7 @@ class MAV:
     def set_position(self, x, y, z):
         if self.drone_state != "OFFBOARD":
             #rospy.loginfo("SETTING OFFBOARD FLIGHT MODE")
-            self.set_mode(custom_mode = "OFFBOARD")
+            self.set_mode_srv(custom_mode = "OFFBOARD")
         self.goal_pose.pose.position.x = x
         self.goal_pose.pose.position.y = y
         self.goal_pose.pose.position.z = z
@@ -119,8 +166,8 @@ class MAV:
     def takeoff(self, height):
         rospy.logwarn("ARMING DRONE")
         self.arm(True)
-
-        self.set_mode(custom_mode = "AUTO.TAKEOFF")
+        for i in range(3):
+            self.set_mode_srv(custom_mode = "AUTO.TAKEOFF")
         return "done"
 
 
