@@ -60,7 +60,6 @@ def detectar ():
 
     return objetos, indices
 
-
 objetos, indices = detectar()
 
 print("As distancias dos objetos detectados são: {}".format(objetos))
