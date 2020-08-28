@@ -4,7 +4,7 @@ res = 60   # Resolução do lidar
 r = 25     #[cm] - Raio dos cilindros (Especificado no edital)
 d_min = 10 #[cm] - Distancia minima permitida pro Drone chegar perto de algo
 
-sensor = np.array([10,12,10,9,6,15,8,10,0,0,30,30,34,37,32,36,38,30,30,30,30,30,30,0,0,12,14,17,40,45,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 10, 11, 13, 11]) # Dado do lidar com tamanho "res"
+sensor = np.array([10,12,10,0,0,0,0,0,0,0,30,30,34,37,32,36,38,30,30,30,30,30,30,0,0,12,14,17,40,45,50,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 10, 11, 13, 11]) # Dado do lidar com tamanho "res"
 
 def prop_max ():
     return (1/np.pi)*np.arccos((r+d_min)/(np.sqrt(2*r**2+2*r*d_min+d_min**2)))
@@ -58,14 +58,14 @@ def detectar ():
 
         i += 1
 
-    if i == len(dists) and indices[0] == 0:
+    if sensor[-1] != 0 and indices[0] == 0:
         
         while abs(dists[i% len(dists) ] - dists[ (i-1) % len(dists) ]) <= varMax:
             temp.append(dists[i% len(dists) ])
             i += 1
         if len(temp)/res < prop_max:
             objetos.append(temp)
-            indices_temp.append( indices[i-1] )
+            indices_temp.append( indices[(i-1) % len(dists)] )
             obj_indices.append(indices_temp)
 
         del objetos[0]
