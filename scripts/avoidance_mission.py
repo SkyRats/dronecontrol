@@ -85,8 +85,8 @@ def run():
             theta += laser_data.angle_increment
             if laser_range != "inf" and laser_range < mav.drone_pose.pose.position.z: # not sure if that's how we verify
                 Fi = Kr * ((a/((laser_range**b)*c)) + d*(laser_range-1.5) - 0.2)
-                Fix = -Fi*np.cos(theta + drone_pose.pose.orientation.z)
-                Fiy = -Fi*np.sin(theta + drone_pose.pose.orientation.z)
+                Fix = -Fi*np.cos(theta + mav.drone_pose.pose.orientation.z)
+                Fiy = -Fi*np.sin(theta + mav.drone_pose.pose.orientation.z)
                 Ft += np.array([Fix, Fiy])
 
         Fg = saturate(Fg)

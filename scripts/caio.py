@@ -29,7 +29,7 @@ def run():
     t=0
     init_time = time.time()
     omega = 2*np.pi*f
-    A = 0.8
+    A = 0.6
     while not time.time() - init_time >= 20:
         t += 1/20.0
         mav.set_position_target(type_mask=MASK_VELOCITY,
