@@ -29,8 +29,6 @@ mavros_pose_target_sub = rospy.get_param("/mavros_pose_target_sub")
 mavros_global_position_sub = rospy.get_param("/mavros_global_position_sub")
 mavros_set_global_pub = rospy.get_param("/mavros_set_global_pub")
 
-for i in range(N):
-    mavs.append(Bee(i))
 
 class Bee:
     def __init__(self, index):
@@ -46,20 +44,20 @@ class Bee:
         '''
         Publishers
         '''
-        self.local_position_pub     = rospy.Publisher("/uav{}/{}".format(index, mavros_local_position_pub), PoseStamped, queue_size = 20)
-        self.velocity_pub           = rospy.Publisher("/uav{}/{}".format(index, mavros_velocity_pub),  TwistStamped, queue_size=5)
-        self.target_pub             = rospy.Publisher("/uav{}/{}".format(index, mavros_pose_target_sub), PositionTarget, queue_size=5)
-        self.global_position_pub    = rospy.Publisher("/uav{}/{}".format(index, mavros_set_global_pub), GeoPoseStamped, queue_size= 20)
+        self.local_position_pub     = rospy.Publisher("/uav{}{}".format(index, mavros_local_position_pub), PoseStamped, queue_size = 20)
+        self.velocity_pub           = rospy.Publisher("/uav{}{}".format(index, mavros_velocity_pub),  TwistStamped, queue_size=5)
+        self.target_pub             = rospy.Publisher("/uav{}{}".format(index, mavros_pose_target_sub), PositionTarget, queue_size=5)
+        self.global_position_pub    = rospy.Publisher("/uav{}{}".format(index, mavros_set_global_pub), GeoPoseStamped, queue_size= 20)
 
         '''
         Subscribers
         '''
 
-        self.local_atual            = rospy.Subscriber("/uav{}/{}".format(index, mavros_local_atual), PoseStamped, self.local_callback_0)
-        self.state_sub              = rospy.Subscriber("/uav{}/{}".format(index, mavros_state_sub), State, self.state_callback_0, queue_size=10) 
-        self.battery_sub            = rospy.Subscriber("/uav{}/{}".format(index, mavros_battery_sub), BatteryState, self.battery_callback_0)
-        self.global_position_sub    = rospy.Subscriber("/uav{}/{}".format(index, mavros_global_position_sub), NavSatFix, self.global_callback_0)
-        self.extended_state_sub     = rospy.Subscriber("/uav{}/{}".format(index, extended_state_sub), ExtendedState, self.extended_state_callback_0, queue_size=2)        
+        self.local_atual            = rospy.Subscriber("/uav{}{}".format(index, mavros_local_atual), PoseStamped, self.local_callback)
+        self.state_sub              = rospy.Subscriber("/uav{}{}".format(index, mavros_state_sub), State, self.state_callback, queue_size=10) 
+        self.battery_sub            = rospy.Subscriber("/uav{}{}".format(index, mavros_battery_sub), BatteryState, self.battery_callback)
+        self.global_position_sub    = rospy.Subscriber("/uav{}{}".format(index, mavros_global_position_sub), NavSatFix, self.global_callback)
+        self.extended_state_sub     = rospy.Subscriber("/uav{}{}".format(index, extended_state_sub), ExtendedState, self.extended_state_callback, queue_size=2)        
         
         '''
         LANDED_STATE_UNDEFINED = 0
@@ -67,8 +65,15 @@ class Bee:
         LANDED_STATE_IN_AIR = 2
         LANDED_STATE_TAKEOFF = 3
         LANDED_STATE_LANDING = 4
+        '''
 
         '''
+        Services
+        '''
+        self.arm                = rospy.ServiceProxy("/uav{}/{}".format(index, mavros_arm), CommandBool)
+        self.set_mode_srv       = rospy.ServiceProxy("/uav{}/{}".format(index, mavros_set_mode), SetMode)
+        self.LAND_STATE         = ExtendedState.LANDED_STATE_UNDEFINED # landing state
+
         service_timeout = 30
         rospy.loginfo("waiting for ROS services")
         try:
@@ -78,13 +83,6 @@ class Bee:
             rospy.loginfo("ROS services are up")
         except rospy.ROSException:
             rospy.logerr("failed to connect to services")
-
-        '''
-        Services
-        '''
-        self.arm                = rospy.ServiceProxy("/uav{}/{}".format(index, mavros_arm), CommandBool)
-        self.set_mode_srv       = rospy.ServiceProxy("/uav{}/{}".format(index, mavros_set_mode), SetMode)
-        self.LAND_STATE         = ExtendedState.LANDED_STATE_UNDEFINED # landing state
 
     def state_callback(self, state_data):
         self.drone_state = state_data
@@ -116,29 +114,29 @@ class SWARM:
 
     ####### Set Position and Velocity ################
     def set_position(self, x, y, z):
-        for mav in mavs:
-            self.goal_pose.pose.position.x = x
-            self.goal_pose.pose.position.y = y
-            self.goal_pose.pose.position.z = z
-            mav.local_position_pub.publish(self.goal_pose)
+        for mav in self.mavs:
+            mav.goal_pose.pose.position.x = x
+            mav.goal_pose.pose.position.y = y
+            mav.goal_pose.pose.position.z = z
+            mav.local_position_pub.publish(mav.goal_pose)
             self.rate.sleep()
 
     def set_vel(self, x, y, z, roll=0, pitch=0, yaw=0):
-        for mav in mavs:
-            self.goal_vel.twist.linear.x = x
-            self.goal_vel.twist.linear.y = y
-            self.goal_vel.twist.linear.z = z
+        for mav in self.mavs:
+            mav.goal_vel.twist.linear.x = x
+            mav.goal_vel.twist.linear.y = y
+            mav.goal_vel.twist.linear.z = z
 
-            self.goal_vel.twist.angular.x = roll
-            self.goal_vel.twist.angular.y = pitch
-            self.goal_vel.twist.angular.z = yaw
-            mav.velocity_pub.publish(self.goal_vel)
+            mav.goal_vel.twist.angular.x = roll
+            mav.goal_vel.twist.angular.y = pitch
+            mav.goal_vel.twist.angular.z = yaw
+            mav.velocity_pub.publish(mav.goal_vel)
 
 
     def set_mode(self, mode, timeout):
         """mode: PX4 mode string, timeout(int): seconds"""
         rospy.loginfo("setting FCU mode: {0}".format(mode))
-        for mav in mavs: 
+        for mav in self.mavs: 
             mav.desired_state = mode
             old_mode = mav.drone_state.mode
             loop_freq = 1  # Hz
@@ -180,7 +178,7 @@ class SWARM:
                 rospy.loginfo("DRONE ALREADY ARMED")
 
             self.rate.sleep()
-                self.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, height)
+            self.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, height)
         self.rate.sleep()
         return "done"
 
@@ -196,6 +194,7 @@ class SWARM:
                 self.rate.sleep()
 
     def land(self):
+        velocity = 1
         for mav in self.mavs:
             init_time = rospy.get_rostime().secs
             height = mav.drone_pose.pose.position.z

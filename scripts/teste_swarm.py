@@ -7,7 +7,7 @@ from geometry_msgs.msg import Vector3Stamped
 
 def go():
     rospy.init_node("head") 
-    swarm = SWARM(2) #é assim  mesmo? esse chat ;p
+    swarm = SWARM(2) 
     height = 4
     
     swarm.takeoff(height)
@@ -30,8 +30,8 @@ def go():
         swarm.rate.sleep()
 
     swarm.rate.sleep()
-    swarm.RTL()
-    #mav.land()
+    #swarm.RTL() seaworm
+    swarm.land()
     #mav._disarm()
 
 
