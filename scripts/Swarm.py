@@ -132,6 +132,17 @@ class SWARM:
             mav.goal_vel.twist.angular.z = yaw
             mav.velocity_pub.publish(mav.goal_vel)
 
+    def set_global_pose(self, mav, lat, lon, altitude, yaw=0):
+        mav.gps_target.pose.position.latitude = lat
+        mav.gps_target.pose.position.longitude = lon
+        mav.gps_target.pose.position.altitude = altitude
+
+        mav.gps_target.pose.orientation.x = mav.gps_target.pose.orientation.y 
+        mav.gps_target.pose.orientation.z = 1
+        mav.gps_target.pose.orientation.w = yaw
+        
+        mav.global_position_pub.publish(mav.gps_target)
+        self.rate.sleep()
 
     def set_mode(self, mode, timeout):
         """mode: PX4 mode string, timeout(int): seconds"""
@@ -178,8 +189,10 @@ class SWARM:
                 rospy.loginfo("DRONE ALREADY ARMED")
 
             self.rate.sleep()
-            self.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, height)
-        self.rate.sleep()
+            while abs(mav.drone_pose.pose.position.z - height) >= ALT_TOL:
+                self.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, height)
+                self.rate.sleep()
+
         return "done"
 
     def RTL(self):
@@ -218,29 +231,14 @@ class SWARM:
                     rospy.loginfo('Drone height' + str(self.drone_pose.pose.position.z))
                     mav.arm(False)
 
-    def go_gps_target(self, type_mask, lat=0, lon=0, altitude=0, x_velocity=0, y_velocity=0, z_velocity=0, x_aceleration=0, y_aceleration=0, z_aceleration=0, yaw=0, yaw_rate=0):
-        self.gps_target.pose.position.latitude = lat
-        self.gps_target.pose.position.longitude = lon
-        self.gps_target.pose.position.altitude = altitude
-        
-        self.gps_target.pose.orientation.x = self.gps_target.pose.orientation.y = 0
-        self.gps_target.pose.orientation.z = 1
-        self.gps_target.pose.orientation.w = yaw
-
-        self.global_position_pub.publish(self.gps_target)
-        self.rate.sleep()
-        
-        for mav in self.mavs:
-            while abs(lat - mav.global_pose.latitude) >= TOL_GLOBAL and abs(lon - mav.global_pose.longitude) >= TOL_GLOBAL:
-                self.gps_target.pose.position.latitude = lat
-                self.gps_target.pose.position.longitude = lon
-                self.gps_target.pose.position.altitude = mav.drone_pose.pose.position.z
-                mav.global_position_pub.publish(self.gps_target)
-                self.rate.sleep()
+    def go_gps_target(self, mav, lat, lon):
+        while abs(lat - mav.global_pose.latitude) >= TOL_GLOBAL and abs(lon - mav.global_pose.longitude) >= TOL_GLOBAL:
+            self.set_global_pose(mav, lat, lon, mav.drone_pose.pose.position.z)
+            self.rate.sleep()
 
     def set_altitude(self, altitude):
         for mav in self.mavs:
-            while abs(altitude - mav.drone_pose.pose.position.z) >= ALT_TOL:
+            for i in range(100):
                 self.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, altitude)
 
 if __name__ == '__main__':
