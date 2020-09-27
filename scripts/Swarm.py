@@ -40,7 +40,7 @@ class Bee:
         self.battery = BatteryState()
         self.global_pose = NavSatFix()
         self.gps_target = GeoPoseStamped()
-
+ 
         '''
         Publishers
         '''
@@ -137,10 +137,9 @@ class SWARM:
         mav.gps_target.pose.position.longitude = lon
         mav.gps_target.pose.position.altitude = altitude
 
-        mav.gps_target.pose.orientation.x = mav.gps_target.pose.orientation.y 
+        mav.gps_target.pose.orientation.x = mav.gps_target.pose.orientation.y = 0
         mav.gps_target.pose.orientation.z = 1
         mav.gps_target.pose.orientation.w = yaw
-        
         mav.global_position_pub.publish(mav.gps_target)
         self.rate.sleep()
 
@@ -156,7 +155,7 @@ class SWARM:
             for i in range(timeout * loop_freq):
                 if mav.drone_state.mode == mode:
                     mode_set = True
-                    break
+                    break 
                 else:
                     try:
                         result = mav.set_mode_srv(0, mode)  # 0 is custom mode
@@ -189,7 +188,11 @@ class SWARM:
                 rospy.loginfo("DRONE ALREADY ARMED")
 
             self.rate.sleep()
+            
+        for mav in self.mavs:
             while abs(mav.drone_pose.pose.position.z - height) >= ALT_TOL:
+                rospy.loginfo("TAKEOFF: SETTING ALTITUDE")
+                rospy.logwarn("ALTITUDE: " + str(mav.drone_pose.pose.position.z))
                 self.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, height)
                 self.rate.sleep()
 

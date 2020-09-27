@@ -14,32 +14,44 @@ def go():
     
     swarm.takeoff(height)
     swarm.rate.sleep()
+    for x in range (10):
+        rospy.logwarn ("TAKEOFF DONE")
 
-    #for i in range(100):
-    #    rospy.logwarn("going off")
-    #    swarm.set_position(0, 0, height)
-    #    swarm.rate.sleep()
+    init_lat = []
+    init_lon = []
+    for mav in swarm.mavs:
+        init_lat.append(mav.global_pose.latitude)
+        init_lon.append(mav.global_pose.longitude)
+    
+    ref_lat = []
+    ref_lon = []
+    for i in range(len(init_lat)):
+        ref_lat.append(init_lat[0] - init_lat[i])
+        ref_lon.append(init_lon[0] - init_lon[i])
 
-    latlon = []
-    #lon =[]
+    lat = []
+    lon = []
+    for i in range(len(init_lat)):
+        lat.append(init_lat[i] + ref_lat[i] + 0.00008)
+        lon.append(init_lon[i] + ref_lon[i] + 0.00008)
+    for mav in swarm.mavs:
+        rospy.logwarn("GLOBAL POSE: " + str(mav.global_pose))
     # usar um auxiliar i = 0 e somar no for
     # usar uma lista para lat e uma para lon 
+    i = 0
     for mav in swarm.mavs:
-        #latlon.append(mav.global_pose.latitude + 0.00008)
-        #latlon.append(mav.global_pose.longitude + 0.00002)
-        lat = mav.global_pose.latitude + 0.00008
-        lon = mav.global_pose.longitude + 0.00008
-
         rospy.logwarn("SETTING GLOBAL POSITION")
-        swarm.go_gps_target(mav,lat,lon)
-        swarm.rate.sleep()
-            
-
+        swarm.go_gps_target(mav, lat[i], lon[i])
+        #swarm.go_gps_target(mav, init_lat_0 + 0.00009, init_lon_0 + 0.00008)
+        #swarm.go_gps_target(mav, init_lat_1 + ref_lat, init_lon_1 + ref_lon)
+        i += 1
+    for mav in swarm.mavs:
+        rospy.logwarn("GLOBAL POSE: " + str(mav.global_pose))
 
     swarm.set_altitude(1)
     rospy.logwarn("PACKAGE DELIVERED")
     swarm.set_altitude(height)
-    
+
     #init_position_mavs0 = swarm.mavs0.drone_pose.pose.position
     #while abs(swarm.mav0.drone_pose.pose.position - init_position_mavs0) >= TOL_GLOBAL or abs(swarm.mavs1.drone_pose.pose.position -  >= TOL_GLOBAL:
     for i in range(100):
