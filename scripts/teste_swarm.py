@@ -15,10 +15,6 @@ def go():
     swarm.takeoff(height)
     swarm.rate.sleep()
 
-    #for i in range(50):
-    #    for mav in swarm.mavs:
-    #    swarm.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, mav.drone_pose.pose.position.z)
-
     init_lat = []
     init_lon = []
     for mav in swarm.mavs:
@@ -39,8 +35,7 @@ def go():
 
     for mav in swarm.mavs:
         rospy.logwarn("GLOBAL POSE: " + str(mav.global_pose))
-    # usar um auxiliar i = 0 e somar no for
-    # usar uma lista para lat e uma para lon 
+
 
     rospy.logwarn("SETTING GLOBAL POSITION")
     swarm.go_gps_target(lat, lon)
@@ -52,8 +47,6 @@ def go():
     rospy.logwarn("PACKAGE DELIVERED")
     swarm.set_altitude(height)
 
-    #init_position_mavs0 = swarm.mavs0.drone_pose.pose.position
-    #while abs(swarm.mav0.drone_pose.pose.position - init_position_mavs0) >= TOL_GLOBAL or abs(swarm.mavs1.drone_pose.pose.position -  >= TOL_GLOBAL:
     for i in range(100):
         rospy.logwarn("GOING BACK")
         swarm.set_position(0, 0, height)
