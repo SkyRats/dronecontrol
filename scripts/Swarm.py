@@ -87,7 +87,8 @@ class Bee:
     def state_callback(self, state_data):
         self.drone_state = state_data
         if self.drone_state.mode != self.desired_state:
-            self.set_mode_srv(0, self.desired_state)
+            for i in range (50):
+                self.set_mode_srv(0, self.desired_state)
 
     def battery_callback(self, bat_data):
         self.battery = bat_data
@@ -131,7 +132,7 @@ class SWARM:
             mav.goal_vel.twist.angular.y = pitch
             mav.goal_vel.twist.angular.z = yaw
             mav.velocity_pub.publish(mav.goal_vel)
-
+    
     def set_global_pose(self, mav, lat, lon, altitude, yaw=0):
         mav.gps_target.pose.position.latitude = lat
         mav.gps_target.pose.position.longitude = lon
@@ -142,7 +143,7 @@ class SWARM:
         mav.gps_target.pose.orientation.w = yaw
         mav.global_position_pub.publish(mav.gps_target)
         self.rate.sleep()
-
+    
     def set_mode(self, mode, timeout):
         """mode: PX4 mode string, timeout(int): seconds"""
         rospy.loginfo("setting FCU mode: {0}".format(mode))
@@ -188,9 +189,9 @@ class SWARM:
                 rospy.loginfo("DRONE ALREADY ARMED")
 
             self.rate.sleep()
-            
-        for mav in self.mavs:
-            while abs(mav.drone_pose.pose.position.z - height) >= ALT_TOL:
+        
+        while abs(self.mavs[0].drone_pose.pose.position.z - height) >= ALT_TOL:
+            for mav in self.mavs:
                 rospy.loginfo("TAKEOFF: SETTING ALTITUDE")
                 rospy.logwarn("ALTITUDE: " + str(mav.drone_pose.pose.position.z))
                 self.set_position(mav.drone_pose.pose.position.x, mav.drone_pose.pose.position.y, height)
@@ -234,10 +235,14 @@ class SWARM:
                     rospy.loginfo('Drone height' + str(self.drone_pose.pose.position.z))
                     mav.arm(False)
 
-    def go_gps_target(self, mav, lat, lon):
-        while abs(lat - mav.global_pose.latitude) >= TOL_GLOBAL and abs(lon - mav.global_pose.longitude) >= TOL_GLOBAL:
-            self.set_global_pose(mav, lat, lon, mav.drone_pose.pose.position.z)
-            self.rate.sleep()
+    def go_gps_target(self, lat, lon):
+        
+        while abs(lat[0] - self.mavs[0].global_pose.latitude) >= TOL_GLOBAL and abs(lon[0] - self.mavs[0].global_pose.longitude) >= TOL_GLOBAL:
+            i = 0
+            for mav in self.mavs:
+                self.set_global_pose(mav, lat[i], lon[i], mav.drone_pose.pose.position.z)
+                self.rate.sleep()
+                i += 1
 
     def set_altitude(self, altitude):
         for mav in self.mavs:
