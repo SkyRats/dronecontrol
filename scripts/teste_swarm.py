@@ -38,8 +38,8 @@ def go():
     ### PARAMETRIZACAO ###
     velocity = 1
 
-    inicial = LatLon(swarm.mavs[0].global_pose.latitude,swarm.mavs[0].global_pose.longitude) 
-    final = LatLon(lat[0], lon[0]) 
+    inicial = LatLon.LatLon(swarm.mavs[0].global_pose.latitude,swarm.mavs[0].global_pose.longitude) 
+    final = LatLon.LatLon(lat[0], lon[0]) 
     inicial_distance = inicial.distance(final) # total distance
     actual_dist = inicial_distance 
 
@@ -67,7 +67,7 @@ def go():
             goal_lat.append(init_lat[i] + ref_lat[i] + p_lat)
             goal_lon.append(init_lon[i] + ref_lon[i] + p_lon)
 
-        inicial = LatLon(swarm.mavs[0].global_pose.latitude, swarm.mavs[0].global_pose.longitude) 
+        inicial = LatLon.LatLon(swarm.mavs[0].global_pose.latitude, swarm.mavs[0].global_pose.longitude) 
         actual_dist = inicial.distance(final)
             
         swarm.go_gps_target(goal_lat, goal_lon)
