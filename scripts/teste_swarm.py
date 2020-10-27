@@ -46,7 +46,7 @@ def go():
         sinal_lon = -1 # distancia eh negativa
     
     # parametros do polinomio
-    velocity = 1
+    velocity = 0.8
     init_time = rospy.get_rostime().secs
     
     for mav in swarm.mavs:
@@ -61,12 +61,20 @@ def go():
         p_lat = ((-2 * (velocity**3) * (time**3)) / dist_lat**2) + ((3*(time**2) * (velocity**2))/dist_lat)
         p_lon = (p_lat / dist_lat) * dist_lon
 
+        while abs(swarm.mavs[0].global_pose.latitude - lat[0]) <= 1/5*abs(lat[0] - init_lat[0]) :
+            set_lat = []
+            set_lon = []
+            for i in range(len(init_lat)):
+                set_lat.append(0.5*(init_lat[i] + ref_lat[i] + sinal_lat * p_lat / c))
+                set_lon.append(0.5*(init_lon[i] + ref_lon[i] + sinal_lon * p_lon / c))
+            swarm.go_gps_target(set_lat, set_lon)
+            swarm.rate.sleep()
+            
         set_lat = []
         set_lon = []
         for i in range(len(init_lat)):
             set_lat.append(init_lat[i] + ref_lat[i] + sinal_lat * p_lat / c)
-            set_lon.append(init_lon[i] + ref_lon[i] + sinal_lon * p_lon / c)     
-
+            set_lon.append(init_lon[i] + ref_lon[i] + sinal_lon * p_lon / c)
         swarm.go_gps_target(set_lat, set_lon)
         swarm.rate.sleep()
 
