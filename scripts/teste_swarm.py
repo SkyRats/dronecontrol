@@ -1,11 +1,22 @@
 #!/usr/bin/env python
 
 from Swarm import Bee, SWARM
-import rospy
+import rospy 
+import numpy as np
 from std_msgs.msg import Bool
 from geometry_msgs.msg import Vector3Stamped
 
-TOL = 0.00001
+TOL = 0.5
+#https://stackoverflow.com/questions/1185408/converting-from-longitude-latitude-to-cartesian-coordinates CARTESIAN
+# Converting lat/long to cartesian (in relation to the center of earth)
+def get_cartesian(lat,lon):
+    lat, lon = np.deg2rad(lat), np.deg2rad(lon)
+    R = 6371 # radius of the earth
+    x = R * np.cos(lat) * np.cos(lon)
+    y = R * np.cos(lat) * np.sin(lon)
+    #z = R *np.sin(lat)
+    
+    return x,y
 
 def go():
     rospy.init_node("head") 
@@ -15,71 +26,64 @@ def go():
     swarm.takeoff(height)
     swarm.rate.sleep()
 
-    init_lat = [] #latitude inicial
-    init_lon = [] #longitude inicial
-    for mav in swarm.mavs:
-        init_lat.append(mav.global_pose.latitude)
-        init_lon.append(mav.global_pose.longitude)
+    init_lat = swarm.mavs[0].global_pose.latitude  # inicial latitude of the fisrt drone in the vector
+    init_lon = swarm.mavs[0].global_pose.longitude  # inicial longitude of the fisrt drone in the vector
+  
+    lat = init_lat + 0.00008
+    lon = init_lon + 0.00008
     
-    ref_lat = []
-    ref_lon = []
-    for i in range(len(init_lat)):
-        ref_lat.append(init_lat[0] - init_lat[i])
-        ref_lon.append(init_lon[0] - init_lon[i])
+    ### CONVERSAO GLOBAL - CARTESIANO ###
 
-    lat = [] #latitude dada
-    lon = [] # longitude dada
-    for i in range(len(init_lat)):
-        lat.append(init_lat[i] + ref_lat[i] + 0.00008)
-        lon.append(init_lon[i] + ref_lon[i] + 0.00008)
+    init_x, init_y = get_cartesian(init_lat, init_lon)
+    final_x, final_y = get_cartesian(lat, lon)
+
+    dist_x = final_x - init_x
+    sinal_x = 1
+    if dist_x < 0:
+        sinal_x = -1
+
+    dist_y = final_y - init_y
+    sinal_y = -1
+    if dist_y < 0:
+        sinal_y = 1
+        
+    dist_tot = (dist_x**2 + dist_y**2)**(1/2)
 
     ### PARAMETRIZACAO ###
-    c = 100000
-    dist_lat = abs(lat[0] - init_lat[0]) * c
-    sinal_lat = 1 # distancia eh positiva
-    if lat[0] < init_lat[0]:
-        sinal_lat = -1 # distancia eh negativa
-
-    dist_lon = abs(lon[0] - init_lon[0]) * c
-    sinal_lon = 1 # distancia eh positiva
-    if lat[0] < init_lat[0]:
-        sinal_lon = -1 # distancia eh negativa
     
-    # parametros do polinomio
-    velocity = 0.8
+    velocity = 1
     init_time = rospy.get_rostime().secs
     
     for mav in swarm.mavs:
         rospy.logwarn("GLOBAL POSE: " + str(mav.global_pose))
-
+        rospy.logwarn("LOCAL POSE: " + str(mav.drone_pose.pose.position))
+        rospy.logwarn("GOAL POSE: x: " + str(dist_x) + " y:" + str(dist_y))
     
-    while abs(swarm.mavs[0].global_pose.latitude - lat[0]) >= TOL and not rospy.is_shutdown():
+    actual_x = init_x
+    actual_y = init_y
+    actual_dist = dist_tot
+    
+    while actual_dist >= TOL and not rospy.is_shutdown():
         sec = rospy.get_rostime().secs 
         time = sec - init_time 
-
+        
         # calculando o polinomio     
-        p_lat = ((-2 * (velocity**3) * (time**3)) / dist_lat**2) + ((3*(time**2) * (velocity**2))/dist_lat)
-        p_lon = (p_lat / dist_lat) * dist_lon
-
-        while abs(swarm.mavs[0].global_pose.latitude - lat[0]) <= 1/5*abs(lat[0] - init_lat[0]) :
-            set_lat = []
-            set_lon = []
-            for i in range(len(init_lat)):
-                set_lat.append(0.5*(init_lat[i] + ref_lat[i] + sinal_lat * p_lat / c))
-                set_lon.append(0.5*(init_lon[i] + ref_lon[i] + sinal_lon * p_lon / c))
-            swarm.go_gps_target(set_lat, set_lon)
-            swarm.rate.sleep()
-            
-        set_lat = []
-        set_lon = []
-        for i in range(len(init_lat)):
-            set_lat.append(init_lat[i] + ref_lat[i] + sinal_lat * p_lat / c)
-            set_lon.append(init_lon[i] + ref_lon[i] + sinal_lon * p_lon / c)
-        swarm.go_gps_target(set_lat, set_lon)
+        p_x = ((-2 * (velocity**3) * (time**3)) / abs(dist_x)**2) + ((3*(time**2) * (velocity**2))/abs(dist_x))
+        p_y = (p_x / abs(dist_x)) * abs(dist_y)
+        
+        swarm.set_position(sinal_x * p_x, sinal_y * p_y, swarm.mavs[0].drone_pose.pose.position.z)
         swarm.rate.sleep()
 
+        actual_x = swarm.mavs[0].drone_pose.pose.position.x
+        actual_y = swarm.mavs[0].drone_pose.pose.position.y
+        actual_dist = ((dist_x-actual_x)**2 + (dist_y - actual_y)**2)**(1/2)
+
+        #for mav in swarm.mavs:
+        #    rospy.logwarn("GLOBAL POSE: " + str(mav.global_pose))
         for mav in swarm.mavs:
-            rospy.logwarn("GLOBAL POSE: " + str(mav.global_pose))
+            #rospy.logwarn("GLOBAL POSE: " + str(mav.global_pose))
+            rospy.logwarn("LOCAL POSE: " + str(mav.drone_pose.pose.position))
+            rospy.logwarn("GOAL POSE: x: " + str(dist_x) + " y:" + str(dist_y))
         
     swarm.set_altitude(1)
     rospy.logwarn("PACKAGE DELIVERED")
@@ -98,3 +102,6 @@ def go():
 
 if __name__ == "__main__":
     go()
+
+
+ 
